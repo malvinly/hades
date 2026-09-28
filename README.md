@@ -2,6 +2,8 @@
 
 Built for organizing Hades speedrun competitions: organizers edit one base save into each scenario's starting file and distribute it to competitors.
 
+Other save editors, web based and open source alike, rewrite the whole file and do not guarantee the result matches the original byte for byte. This tool exists so that only the values you asked to change actually change.
+
 It is a command-line tool that edits a few values in a Hades 1 or Hades II save file (`.sav`). The game is detected from the file.
 
 | Game | Save version | Fields |
