@@ -1,14 +1,17 @@
-# hades1-editor
+# hades-editor
 
-Built for organizing Hades 1 speedrun competitions: organizers edit one base save into each scenario's starting file and distribute it to competitors.
+Built for organizing Hades speedrun competitions: organizers edit one base save into each scenario's starting file and distribute it to competitors.
 
-It is a command-line tool that edits three values in a Hades 1 save file (`.sav`, save version 16):
+It is a command-line tool that edits a few values in a Hades 1 or Hades II save file (`.sav`). The game is detected from the file.
 
-- Darkness held
-- Chthonic Keys held
-- God Mode level (0 to 30; the game caps it at 30)
+| Game | Save version | Fields |
+| --- | --- | --- |
+| Hades 1 | 16 | Darkness held, Chthonic Keys held, God Mode level |
+| Hades II | 18 | Bones held, Ashes held, Psyche held, God Mode level |
 
-Every byte that is not part of the requested edit is written back unchanged. Only the header checksum is recalculated. The God Mode on/off switch is left alone; turn it on in the game.
+God Mode level accepts 0 to 30; both games cap it at 30. The God Mode on/off switch is left alone; turn it on in the game.
+
+Every byte that is not part of the requested edit is written back unchanged. Only the header checksum is recalculated.
 
 ## Requirements
 
@@ -26,37 +29,47 @@ dotnet build -c Release
 The executable is written to:
 
 ```
-src\Hades1-Editor\bin\Release\net10.0\hades1-editor.exe
+src\Hades-Editor\bin\Release\net10.0\hades-editor.exe
 ```
 
-Run the tests with `dotnet test`. They need a copy of a Hades 1 save at `tests\Hades1-Editor.Tests\TestData\Profile1.sav`. That folder is gitignored, so copy one in yourself.
+Run the tests with `dotnet test`. They need copies of real saves in `tests\Hades-Editor.Tests\TestData\`, which is gitignored:
+
+- `Hades1-Profile1.sav`: a Hades 1 save
+- `Hades2-Profile1.sav`: a Hades II save
 
 ## Usage
 
 Close the game first. It rewrites the save file when you exit.
 
-Hades keeps its saves in `%USERPROFILE%\Documents\Saved Games\Hades\`. The main profile is `Profile1.sav`.
+Save locations:
+
+- Hades 1: `%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav`
+- Hades II: `%USERPROFILE%\Saved Games\Hades II\Profile1.sav`
 
 ### Show the current values
 
 ```
-hades1-editor show "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav"
+hades-editor show "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav"
 ```
 
-Prints Darkness held, Chthonic Keys held, God Mode level, the lifetime Darkness stored in the header, and whether God Mode is on.
+Prints the game, the editable values, and whether God Mode is on. For Hades 1 it also prints the lifetime Darkness stored in the header.
 
 ### Edit into a new file
 
 ```
-hades1-editor set "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav" --out edited.sav --darkness 20000 --keys 30 --godmode-level 10
+hades-editor set "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav" --out edited.sav --darkness 20000 --keys 30 --godmode-level 10
 ```
 
-Any combination of `--darkness`, `--keys` and `--godmode-level` works. The input file is never written to. The output path must differ from the input path.
+```
+hades-editor set "%USERPROFILE%\Saved Games\Hades II\Profile1.sav" --out edited.sav --bones 5000 --ashes 1000 --psyche 250
+```
+
+Any combination of the game's fields works. The input file is never written to. The output path must differ from the input path.
 
 ### Edit in place
 
 ```
-hades1-editor set "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav" --in-place --godmode-level 10
+hades-editor set "%USERPROFILE%\Saved Games\Hades II\Profile1.sav" --in-place --godmode-level 10
 ```
 
 A timestamped backup such as `Profile1.sav.20260928-134553.bak` is written next to the save before it is edited.
@@ -66,7 +79,8 @@ A timestamped backup such as `Profile1.sav.20260928-134553.bak` is written next 
 The tool writes nothing and exits with code 1 when:
 
 - the file is not a Hades save, or its checksum does not match
-- the save is from Hades 2 (version 17 or later)
+- the save version is not 16 (Hades 1) or 18 (Hades II)
+- a field belongs to the other game, for example `--bones` on a Hades 1 save
 - a value is missing from the save, negative, not a whole number, or a God Mode level above 30
 - neither or both of `--out` and `--in-place` are given
 
@@ -74,6 +88,6 @@ After every edit the output is re-read and checked for the new values before the
 
 ## Layout
 
-- `src\Hades.SaveFormat`: save file, luabins and LZ4 handling, shared with a future Hades 2 editor
-- `src\Hades1-Editor`: the CLI and the list of Hades 1 fields it can edit
-- `tests\Hades1-Editor.Tests`: xUnit tests
+- `src\Hades.SaveFormat`: save file, luabins and LZ4 handling for both games
+- `src\Hades-Editor`: the CLI and the per-game field tables
+- `tests\Hades-Editor.Tests`: xUnit tests

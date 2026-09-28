@@ -1,31 +1,37 @@
 using Hades.SaveFormat;
 
-namespace Hades1Editor.Tests;
+namespace HadesEditor.Tests;
 
 public class EditTests
 {
     [Fact]
-    public void Setting_all_fields_changes_exactly_those_leaves()
-    {
-        var original = HadesSave.Read(File.ReadAllBytes(TestData.Profile1));
-        var edited = HadesSave.Read(File.ReadAllBytes(TestData.Profile1));
-        var darkness = Hades1Fields.All.Single(f => f.Name == "darkness");
-        var keys = Hades1Fields.All.Single(f => f.Name == "keys");
-        var godMode = Hades1Fields.All.Single(f => f.Name == "godmode-level");
+    public void Hades1_edit_changes_exactly_the_requested_leaves() =>
+        AssertEditChangesOnly(TestData.Hades1, Game.Hades1,
+            new() { ["darkness"] = 99999, ["keys"] = 42, ["godmode-level"] = 7 },
+            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/LockKeys", "/0/GameState/Resources/MetaPoints"]);
 
-        darkness.Set(edited, 99999);
-        keys.Set(edited, 42);
-        godMode.Set(edited, 7);
+    [Fact]
+    public void Hades2_edit_changes_exactly_the_requested_leaves() =>
+        AssertEditChangesOnly(TestData.Hades2, Game.Hades2,
+            new() { ["bones"] = 5000, ["ashes"] = 1000, ["psyche"] = 250, ["godmode-level"] = 3 },
+            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/MemPointsCommon", "/0/GameState/Resources/MetaCardPointsCommon", "/0/GameState/Resources/MetaCurrency"]);
+
+    private static void AssertEditChangesOnly(string path, Game game, Dictionary<string, long> edits, string[] expectedChangedPaths)
+    {
+        var original = HadesSave.Read(File.ReadAllBytes(path));
+        var edited = HadesSave.Read(File.ReadAllBytes(path));
+        var fields = GameFields.ByGame[game];
+        Assert.Equal(game, edited.Game);
+
+        foreach (var (name, value) in edits)
+            fields.Single(f => f.Name == name).Set(edited, value);
         var reread = HadesSave.Read(edited.Write());
 
-        Assert.Equal(99999, darkness.Get(reread));
-        Assert.Equal(42, keys.Get(reread));
-        Assert.Equal(7, godMode.Get(reread));
+        foreach (var (name, value) in edits)
+            Assert.Equal(value, fields.Single(f => f.Name == name).Get(reread));
         var differences = new List<string>();
         Diff(original.Root, reread.Root, "", differences);
-        Assert.Equal(
-            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/LockKeys", "/0/GameState/Resources/MetaPoints"],
-            differences.Order());
+        Assert.Equal(expectedChangedPaths, differences.Order());
     }
 
     private static void Diff(IReadOnlyList<LuaValue> a, IReadOnlyList<LuaValue> b, string path, List<string> differences)

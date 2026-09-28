@@ -2,11 +2,13 @@ using K4os.Compression.LZ4;
 
 namespace Hades.SaveFormat;
 
+public enum Game { Hades1, Hades2 }
+
 /// <summary>A Hades save file: header fields kept verbatim, plus the decoded Lua root values.</summary>
 public sealed class HadesSave
 {
     private const uint Magic = 0x31424753; // "SGB1"
-    private const ushort SupportedVersion = 16;
+    private const ushort Hades1Version = 16, Hades2Version = 18;
 
     public required ushort Version { get; init; }
     public required ushort Flags { get; init; }
@@ -15,12 +17,17 @@ public sealed class HadesSave
     public required uint CompletedRuns { get; init; }
     public required uint AccumulatedMetaPoints { get; init; }
     public required uint ActiveShrinePoints { get; init; }
+    /// <summary>Hades 2 only: the Grasp and Prestige values the game mirrors into the header.</summary>
+    public uint? Grasp { get; init; }
+    public uint? Prestige { get; init; }
     public required byte EasyMode { get; init; }
     public required byte HardMode { get; init; }
     public required List<string> NotableLuaData { get; init; }
     public required string MapName { get; init; }
     public required string MapName2 { get; init; }
     public required List<LuaValue> Root { get; init; }
+
+    public Game Game => Version == Hades1Version ? Game.Hades1 : Game.Hades2;
 
     /// <summary>The first Lua root value, which holds the game state tables.</summary>
     public LuaTable RootTable => Root.Count > 0 && Root[0] is LuaTable t
@@ -34,8 +41,8 @@ public sealed class HadesSave
         if (reader.ReadUInt32() != Adler32.Compute(bytes.AsSpan(8)))
             throw new SaveFormatException("Checksum mismatch; file is corrupt or truncated");
         var version = reader.ReadUInt16();
-        if (version != SupportedVersion)
-            throw new SaveFormatException($"Save version {version} is not supported (only Hades 1, version {SupportedVersion})");
+        if (version is not (Hades1Version or Hades2Version))
+            throw new SaveFormatException($"Save version {version} is not supported (Hades 1 is {Hades1Version}, Hades II is {Hades2Version})");
 
         var save = new HadesSave
         {
@@ -46,6 +53,8 @@ public sealed class HadesSave
             CompletedRuns = reader.ReadUInt32(),
             AccumulatedMetaPoints = reader.ReadUInt32(),
             ActiveShrinePoints = reader.ReadUInt32(),
+            Grasp = version == Hades2Version ? reader.ReadUInt32() : null,
+            Prestige = version == Hades2Version ? reader.ReadUInt32() : null,
             EasyMode = reader.ReadByte(),
             HardMode = reader.ReadByte(),
             NotableLuaData = Enumerable.Range(0, reader.ReadInt32()).Select(_ => reader.ReadLengthPrefixedString()).ToList(),
@@ -71,6 +80,8 @@ public sealed class HadesSave
         writer.Write(CompletedRuns);
         writer.Write(AccumulatedMetaPoints);
         writer.Write(ActiveShrinePoints);
+        if (Grasp is { } grasp) writer.Write(grasp);
+        if (Prestige is { } prestige) writer.Write(prestige);
         writer.Write(EasyMode);
         writer.Write(HardMode);
         writer.Write(NotableLuaData.Count);

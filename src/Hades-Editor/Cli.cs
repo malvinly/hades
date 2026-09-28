@@ -1,16 +1,17 @@
 using Hades.SaveFormat;
 
-namespace Hades1Editor;
+namespace HadesEditor;
 
 public static class Cli
 {
     private static readonly string Usage = $"""
         Usage:
-          hades1-editor show <save.sav>
-          hades1-editor set <save.sav> (--out <new.sav> | --in-place) [--<field> N]...
+          hades-editor show <save.sav>
+          hades-editor set <save.sav> (--out <new.sav> | --in-place) [--<field> N]...
 
-        Fields:
-        {string.Join("\n", Hades1Fields.All.Select(f => $"  --{f.Name,-14} {f.Description} ({f.Min}-{f.Max})"))}
+        The game is detected from the save file. Fields:
+        {string.Join("\n", GameFields.ByGame.Select(g => $"  {GameFields.Label(g.Key)}:\n" +
+            string.Join("\n", g.Value.Select(f => $"    --{f.Name,-14} {f.Description} ({f.Min}-{f.Max})"))))}
 
         --in-place writes a timestamped backup next to the save before editing it.
         """;
@@ -37,12 +38,14 @@ public static class Cli
     private static int Show(string path, TextWriter output)
     {
         var save = HadesSave.Read(File.ReadAllBytes(path));
-        foreach (var field in Hades1Fields.All)
+        output.WriteLine($"{"Game",-32} {GameFields.Label(save.Game)}");
+        foreach (var field in GameFields.ByGame[save.Game])
             output.WriteLine($"{field.Description,-32} {field.Get(save)}");
-        output.WriteLine($"{"Lifetime Darkness (header)",-32} {save.AccumulatedMetaPoints}");
+        if (save.Game == Game.Hades1)
+            output.WriteLine($"{"Lifetime Darkness (header)",-32} {save.AccumulatedMetaPoints}");
         output.WriteLine($"{"God Mode on (header)",-32} {save.EasyMode != 0}");
-        var luaEasyMode = save.RootTable.Find(["ConfigOptionCache", "EasyMode"]) is LuaBool b ? b.Value.ToString() : "missing";
-        output.WriteLine($"{"God Mode on (ConfigOptionCache)",-32} {luaEasyMode}");
+        if (save.RootTable.Find(["ConfigOptionCache", "EasyMode"]) is LuaBool luaEasyMode)
+            output.WriteLine($"{"God Mode on (ConfigOptionCache)",-32} {luaEasyMode.Value}");
         return 0;
     }
 
@@ -55,14 +58,16 @@ public static class Cli
         outPath ??= path;
         if (!inPlace && Path.GetFullPath(outPath) == Path.GetFullPath(path))
             throw new ArgumentException("Output path equals input path; use --in-place to edit the file itself");
-
-        var edits = options.Select(o => (
-            Field: Hades1Fields.All.FirstOrDefault(f => f.Name == o.Key) ?? throw new ArgumentException($"Unknown option --{o.Key}\n{Usage}"),
-            Value: long.TryParse(o.Value, out var n) ? n : throw new ArgumentException($"--{o.Key} needs a whole number, got '{o.Value}'"))).ToList();
-        if (edits.Count == 0)
+        if (options.Count == 0)
             throw new ArgumentException("Nothing to set\n" + Usage);
 
         var save = HadesSave.Read(File.ReadAllBytes(path));
+        var fields = GameFields.ByGame[save.Game];
+        var edits = options.Select(o => (
+            Field: fields.FirstOrDefault(f => f.Name == o.Key)
+                ?? throw new ArgumentException($"--{o.Key} is not a {GameFields.Label(save.Game)} field\n{Usage}"),
+            Value: long.TryParse(o.Value, out var n) ? n : throw new ArgumentException($"--{o.Key} needs a whole number, got '{o.Value}'"))).ToList();
+
         foreach (var (field, newValue) in edits)
             field.Set(save, newValue);
         var bytes = save.Write();
