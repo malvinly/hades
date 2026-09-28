@@ -11,7 +11,7 @@ It is a command-line tool that edits a few values in a Hades 1 or Hades II save 
 
 God Mode level accepts 0 to 30; both games cap it at 30. The God Mode on/off switch is left alone; turn it on in the game.
 
-Every byte that is not part of the requested edit is written back unchanged. Only the header checksum is recalculated.
+Every header field and every Lua value other than the ones you edit is written back unchanged; only the checksum and the compressed block change. Before editing, the tool checks that it can reproduce the input file byte for byte and refuses if it cannot.
 
 ## Requirements
 
@@ -52,7 +52,7 @@ Save locations:
 hades-editor show "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav"
 ```
 
-Prints the game, the editable values, and whether God Mode is on. For Hades 1 it also prints the lifetime Darkness stored in the header.
+Prints the game, the editable values, and whether God Mode is on. For Hades 1 it also prints the lifetime Darkness stored in the header. A value the save does not contain yet is shown as missing.
 
 ### Edit into a new file
 
@@ -64,15 +64,7 @@ hades-editor set "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav" --out 
 hades-editor set "%USERPROFILE%\Saved Games\Hades II\Profile1.sav" --out edited.sav --bones 5000 --ashes 1000 --psyche 250
 ```
 
-Any combination of the game's fields works. The input file is never written to. The output path must differ from the input path.
-
-### Edit in place
-
-```
-hades-editor set "%USERPROFILE%\Saved Games\Hades II\Profile1.sav" --in-place --godmode-level 10
-```
-
-A timestamped backup such as `Profile1.sav.20260928-134553.bak` is written next to the save before it is edited.
+Any combination of the game's fields works. The input file is never written to, and `--out` must name a different file. The output is written to a temporary file and moved into place, so a failed write never leaves a partial save behind.
 
 ### Errors
 
@@ -82,7 +74,8 @@ The tool writes nothing and exits with code 1 when:
 - the save version is not 16 (Hades 1) or 18 (Hades II)
 - a field belongs to the other game, for example `--bones` on a Hades 1 save
 - a value is missing from the save, negative, not a whole number, or a God Mode level above 30
-- neither or both of `--out` and `--in-place` are given
+- `--out` is missing, names the input file, or an option is repeated
+- the save does not round-trip byte for byte before editing, which means the file contains something this tool cannot reproduce exactly
 
 After every edit the output is re-read and checked for the new values before the tool reports success.
 

@@ -1,6 +1,11 @@
 namespace Hades.SaveFormat;
 
-/// <summary>A value in the luabins tree. Numbers keep their exact 8 bytes; tables keep entry order and sizes.</summary>
+/// <summary>
+/// A value in the luabins tree. The model exists to reproduce the game's bytes exactly, so:
+/// numbers keep their raw 8 bytes (NaN payloads and -0 survive), strings keep raw bytes,
+/// and tables keep entry order plus the array/hash sizes the game wrote. Record equality is
+/// by reference for byte[] and List fields; compare contents explicitly.
+/// </summary>
 public abstract record LuaValue;
 
 public sealed record LuaNil : LuaValue
@@ -22,6 +27,11 @@ public sealed record LuaString(byte[] Bytes) : LuaValue
     public override string ToString() => Encoding.UTF8.GetString(Bytes);
 }
 
+/// <summary>
+/// ArraySize + HashSize must equal Entries.Count: the reader uses their sum as the entry count.
+/// The game computes them with lua_objlen, which cannot be recomputed reliably for tables with
+/// gaps, so they are kept as read and entries are only ever replaced, never added or removed.
+/// </summary>
 public sealed record LuaTable(int ArraySize, int HashSize, List<KeyValuePair<LuaValue, LuaValue>> Entries) : LuaValue
 {
     public LuaValue? this[string key] => Entries.FirstOrDefault(e => e.Key is LuaString s && s.Equals(key)).Value;
@@ -35,7 +45,7 @@ public sealed record LuaTable(int ArraySize, int HashSize, List<KeyValuePair<Lua
         return current;
     }
 
-    /// <summary>Replaces the value at an existing path. Never adds keys.</summary>
+    /// <summary>Replaces the value at an existing path in place. Never adds keys.</summary>
     public void Replace(IReadOnlyList<string> path, LuaValue value)
     {
         var parent = Find(path.Take(path.Count - 1).ToList()) as LuaTable;

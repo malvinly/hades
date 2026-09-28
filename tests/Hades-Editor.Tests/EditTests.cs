@@ -16,6 +16,15 @@ public class EditTests
             new() { ["bones"] = 5000, ["ashes"] = 1000, ["psyche"] = 250, ["godmode-level"] = 3 },
             ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/MemPointsCommon", "/0/GameState/Resources/MetaCardPointsCommon", "/0/GameState/Resources/MetaCurrency"]);
 
+    [Fact]
+    public void Setting_a_field_whose_value_is_not_a_number_is_refused()
+    {
+        var save = HadesSave.Read(File.ReadAllBytes(TestData.Hades1));
+        var field = new SaveField("resources", "Resources table", ["GameState", "Resources"]);
+
+        Assert.Throws<SaveFormatException>(() => field.Set(save, 1));
+    }
+
     private static void AssertEditChangesOnly(string path, Game game, Dictionary<string, long> edits, string[] expectedChangedPaths)
     {
         var original = HadesSave.Read(File.ReadAllBytes(path));
@@ -32,6 +41,31 @@ public class EditTests
         var differences = new List<string>();
         Diff(original.Root, reread.Root, "", differences);
         Assert.Equal(expectedChangedPaths, differences.Order());
+
+        AssertHeaderUnchanged(original, reread);
+        var originalLua = Luabins.Write(original.Root);
+        var rereadLua = Luabins.Write(reread.Root);
+        Assert.Equal(originalLua.Length, rereadLua.Length);
+        var changedBytes = originalLua.Zip(rereadLua).Count(pair => pair.First != pair.Second);
+        Assert.InRange(changedBytes, 1, 8 * edits.Count);
+    }
+
+    private static void AssertHeaderUnchanged(HadesSave a, HadesSave b)
+    {
+        Assert.Equal(a.Version, b.Version);
+        Assert.Equal(a.Flags, b.Flags);
+        Assert.Equal(a.Timestamp, b.Timestamp);
+        Assert.Equal(a.Location, b.Location);
+        Assert.Equal(a.CompletedRuns, b.CompletedRuns);
+        Assert.Equal(a.AccumulatedMetaPoints, b.AccumulatedMetaPoints);
+        Assert.Equal(a.ActiveShrinePoints, b.ActiveShrinePoints);
+        Assert.Equal(a.Grasp, b.Grasp);
+        Assert.Equal(a.Prestige, b.Prestige);
+        Assert.Equal(a.EasyMode, b.EasyMode);
+        Assert.Equal(a.HardMode, b.HardMode);
+        Assert.Equal(a.NotableLuaData, b.NotableLuaData);
+        Assert.Equal(a.MapName, b.MapName);
+        Assert.Equal(a.MapName2, b.MapName2);
     }
 
     private static void Diff(IReadOnlyList<LuaValue> a, IReadOnlyList<LuaValue> b, string path, List<string> differences)

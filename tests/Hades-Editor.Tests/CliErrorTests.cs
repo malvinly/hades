@@ -19,7 +19,7 @@ public class CliErrorTests : IDisposable
         gameState.Entries[index] = new(new LuaString("EasyModeLevex"u8.ToArray()), gameState.Entries[index].Value);
         File.WriteAllBytes(Input, save.Write());
 
-        AssertFails("Path not found", "set", Input, "--out", Output, "--godmode-level", "5");
+        AssertFails("Path not found or not a number: GameState.EasyModeLevel", "set", Input, "--out", Output, "--godmode-level", "5");
     }
 
     [Fact]
@@ -42,16 +42,34 @@ public class CliErrorTests : IDisposable
         AssertFails("Checksum mismatch", "set", Input, "--out", Output, "--darkness", "1");
     }
 
+    [Fact]
+    public void Unsupported_version_fails_and_writes_nothing()
+    {
+        var bytes = File.ReadAllBytes(TestData.Hades1);
+        bytes[8] = 17;
+        BitConverter.TryWriteBytes(bytes.AsSpan(4), Adler32(bytes.AsSpan(8)));
+        File.WriteAllBytes(Input, bytes);
+
+        AssertFails("Save version 17 is not supported", "set", Input, "--out", Output, "--darkness", "1");
+    }
+
     [Theory]
     [InlineData("--godmode-level", "31")]
     [InlineData("--godmode-level", "-1")]
     [InlineData("--darkness", "-5")]
-    [InlineData("--keys", "1.5")]
     public void Out_of_range_value_fails_and_writes_nothing(string option, string value)
     {
         File.Copy(TestData.Hades1, Input);
 
-        AssertFails(option[2..], "set", Input, "--out", Output, option, value);
+        AssertFails($"{option[2..]} must be between", "set", Input, "--out", Output, option, value);
+    }
+
+    [Fact]
+    public void Non_integer_value_fails_and_writes_nothing()
+    {
+        File.Copy(TestData.Hades1, Input);
+
+        AssertFails("--keys needs a whole number", "set", Input, "--out", Output, "--keys", "1.5");
     }
 
     [Fact]
@@ -70,12 +88,39 @@ public class CliErrorTests : IDisposable
         AssertFails("--darkness is not a Hades II field", "set", Input, "--out", Output, "--darkness", "100", "--bones", "100");
     }
 
-    [Fact]
-    public void Output_equal_to_input_is_refused()
+    [Theory]
+    [InlineData("in.sav")]
+    [InlineData("IN.SAV")]
+    public void Output_equal_to_input_is_refused(string outputName)
     {
         File.Copy(TestData.Hades1, Input);
 
-        AssertFails("--in-place", "set", Input, "--out", Input, "--darkness", "1");
+        AssertFails("Output path must be a different file", "set", Input, "--out", Path.Combine(_dir, outputName), "--darkness", "1");
+        Assert.Equal(File.ReadAllBytes(TestData.Hades1), File.ReadAllBytes(Input));
+    }
+
+    [Fact]
+    public void Missing_out_option_fails()
+    {
+        File.Copy(TestData.Hades1, Input);
+
+        AssertFails("--out <path> is required", "set", Input, "--darkness", "1");
+    }
+
+    [Fact]
+    public void Repeated_option_fails_and_writes_nothing()
+    {
+        File.Copy(TestData.Hades1, Input);
+
+        AssertFails("--keys was given more than once", "set", Input, "--out", Output, "--keys", "5", "--keys", "50");
+    }
+
+    [Fact]
+    public void Option_without_value_fails_and_writes_nothing()
+    {
+        File.Copy(TestData.Hades1, Input);
+
+        AssertFails("Expected --option value", "set", Input, "--out", Output, "--keys");
     }
 
     private void AssertFails(string expectedMessagePart, params string[] args)
@@ -87,5 +132,17 @@ public class CliErrorTests : IDisposable
         Assert.NotEqual(0, exitCode);
         Assert.Contains(expectedMessagePart, error.ToString());
         Assert.False(File.Exists(Output), "No output file should be written on error");
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+    }
+
+    private static uint Adler32(ReadOnlySpan<byte> data)
+    {
+        uint a = 1, b = 0;
+        foreach (var value in data)
+        {
+            a = (a + value) % 65521;
+            b = (b + a) % 65521;
+        }
+        return (b << 16) | a;
     }
 }
