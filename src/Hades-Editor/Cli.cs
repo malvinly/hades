@@ -77,14 +77,30 @@ public static class Cli
             if (field.Get(reread) != newValue)
                 throw new SaveFormatException($"Verification failed: {field.Name} did not read back as {newValue}");
 
-        // Write to a temp file and move it into place so a failed write never leaves a partial output.
-        var tempPath = outPath + ".tmp";
-        File.WriteAllBytes(tempPath, bytes);
-        File.Move(tempPath, outPath, overwrite: true);
+        WriteAtomically(outPath, bytes);
         foreach (var (field, newValue) in edits)
             output.WriteLine($"{field.Description,-32} {newValue}");
         output.WriteLine($"Saved to {outPath}");
         return 0;
+    }
+
+    /// <summary>
+    /// Writes to a uniquely named temp file in the target folder, then moves it into place, so a failed
+    /// write never leaves a partial output and the temp file can never be the input or an existing file.
+    /// </summary>
+    private static void WriteAtomically(string outPath, byte[] bytes)
+    {
+        var tempPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(outPath))!, Path.GetRandomFileName());
+        try
+        {
+            using (var stream = new FileStream(tempPath, FileMode.CreateNew))
+                stream.Write(bytes);
+            File.Move(tempPath, outPath, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
     }
 
     /// <summary>Parses "--name value" pairs. Every option takes a value; repeating one is an error.</summary>

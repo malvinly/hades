@@ -64,7 +64,7 @@ public class CliTests : IDisposable
 
         Assert.Equal(0, exitCode);
         Assert.Equal(original, File.ReadAllBytes(Input));
-        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+        Assert.Equal(2, Directory.GetFiles(_dir).Length);
         var written = HadesSave.Read(File.ReadAllBytes(Output));
         var fields = GameFields.ByGame[Game.Hades1];
         Assert.Equal(50, fields.Single(f => f.Name == "keys").Get(written));

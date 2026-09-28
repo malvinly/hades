@@ -123,6 +123,20 @@ public class CliErrorTests : IDisposable
         AssertFails("Expected --option value", "set", Input, "--out", Output, "--keys");
     }
 
+    [Fact]
+    public void Failed_move_into_place_leaves_no_files_behind()
+    {
+        File.Copy(TestData.Hades1, Input);
+        Directory.CreateDirectory(Output); // a directory where the output file should go makes the final move fail
+
+        var error = new StringWriter();
+        var exitCode = Cli.Run(["set", Input, "--out", Output, "--keys", "5"], TextWriter.Null, error);
+
+        Assert.NotEqual(0, exitCode);
+        Assert.StartsWith("Error:", error.ToString());
+        Assert.Equal([Input], Directory.GetFiles(_dir));
+    }
+
     private void AssertFails(string expectedMessagePart, params string[] args)
     {
         var error = new StringWriter();
@@ -132,7 +146,7 @@ public class CliErrorTests : IDisposable
         Assert.NotEqual(0, exitCode);
         Assert.Contains(expectedMessagePart, error.ToString());
         Assert.False(File.Exists(Output), "No output file should be written on error");
-        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+        Assert.All(Directory.GetFiles(_dir), f => Assert.Equal(Input, f));
     }
 
     private static uint Adler32(ReadOnlySpan<byte> data)

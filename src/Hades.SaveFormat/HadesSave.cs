@@ -63,7 +63,7 @@ public sealed class HadesSave
             NotableLuaData = Enumerable.Range(0, reader.ReadInt32()).Select(_ => reader.ReadLengthPrefixedString()).ToList(),
             MapName = reader.ReadLengthPrefixedString(),
             MapName2 = reader.ReadLengthPrefixedString(),
-            Root = Luabins.Read(Lz4Block.Decompress(reader.ReadBytes(reader.ReadInt32()))),
+            Root = Luabins.Read(Lz4Block.Decompress(reader.ReadBytesExact(reader.ReadInt32()))),
         };
         if (reader.BaseStream.Position != bytes.Length)
             throw new SaveFormatException("Trailing bytes after compressed Lua data");
@@ -109,7 +109,7 @@ public sealed class HadesSave
 internal static class BinaryExtensions
 {
     public static string ReadLengthPrefixedString(this BinaryReader reader) =>
-        Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt32()));
+        Encoding.UTF8.GetString(reader.ReadBytesExact(reader.ReadInt32()));
 
     public static void WriteLengthPrefixedString(this BinaryWriter writer, string value)
     {
