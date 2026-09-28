@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hades.SaveFormat\Hades.SaveFormat.csproj" />
-    <ProjectReference Include="..\..\src\Hades1Editor\Hades1Editor.csproj" />
+    <ProjectReference Include="..\..\src\Hades1-Editor\Hades1-Editor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
