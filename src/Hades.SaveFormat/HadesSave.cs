@@ -20,7 +20,7 @@ public sealed class HadesSave
     public required uint CompletedRuns { get; init; }
     public required uint AccumulatedMetaPoints { get; init; }
     public required uint ActiveShrinePoints { get; init; }
-    /// <summary>Hades II only (version 18): values the game mirrors into the header. Null for Hades 1.</summary>
+    /// <summary>Hades 2 only (version 18): values the game mirrors into the header. Null for Hades 1.</summary>
     public uint? Grasp { get; init; }
     public uint? Prestige { get; init; }
     public required byte EasyMode { get; init; }
@@ -45,7 +45,7 @@ public sealed class HadesSave
             throw new SaveFormatException("Checksum mismatch; file is corrupt or truncated");
         var version = reader.ReadUInt16();
         if (version is not (Hades1Version or Hades2Version))
-            throw new SaveFormatException($"Save version {version} is not supported (Hades 1 is {Hades1Version}, Hades II is {Hades2Version})");
+            throw new SaveFormatException($"Save version {version} is not supported (Hades 1 is {Hades1Version}, Hades 2 is {Hades2Version})");
 
         var save = new HadesSave
         {
@@ -85,8 +85,8 @@ public sealed class HadesSave
         writer.Write(ActiveShrinePoints);
         if (Version == Hades2Version)
         {
-            writer.Write(Grasp ?? throw new SaveFormatException("Hades II save is missing Grasp"));
-            writer.Write(Prestige ?? throw new SaveFormatException("Hades II save is missing Prestige"));
+            writer.Write(Grasp ?? throw new SaveFormatException("Hades 2 save is missing Grasp"));
+            writer.Write(Prestige ?? throw new SaveFormatException("Hades 2 save is missing Prestige"));
         }
         writer.Write(EasyMode);
         writer.Write(HardMode);

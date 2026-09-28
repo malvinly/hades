@@ -23,5 +23,5 @@ public static class GameFields
         ],
     };
 
-    public static string Label(Game game) => game == Game.Hades1 ? "Hades 1" : "Hades II";
+    public static string Label(Game game) => game == Game.Hades1 ? "Hades 1" : "Hades 2";
 }

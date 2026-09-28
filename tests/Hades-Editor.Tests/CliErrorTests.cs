@@ -85,7 +85,7 @@ public class CliErrorTests : IDisposable
     {
         File.Copy(TestData.Hades2, Input);
 
-        AssertFails("--darkness is not a Hades II field", "set", Input, "--out", Output, "--darkness", "100", "--bones", "100");
+        AssertFails("--darkness is not a Hades 2 field", "set", Input, "--out", Output, "--darkness", "100", "--bones", "100");
     }
 
     [Theory]

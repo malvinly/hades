@@ -29,7 +29,7 @@ public class CliTests : IDisposable
     {
         var lines = Show(TestData.Hades2);
 
-        Assert.Contains("Game                             Hades II", lines);
+        Assert.Contains("Game                             Hades 2", lines);
         Assert.Contains("Bones held                       3785", lines);
         Assert.Contains("Ashes held                       760", lines);
         Assert.Contains("Psyche held                      934", lines);
