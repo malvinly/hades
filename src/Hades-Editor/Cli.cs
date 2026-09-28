@@ -43,9 +43,7 @@ public static class Cli
             output.WriteLine($"{field.Description,-32} {field.Find(save)?.ToString() ?? "missing (not yet in this save)"}");
         if (save.Game == Game.Hades1)
             output.WriteLine($"{"Lifetime Darkness (header)",-32} {save.AccumulatedMetaPoints}");
-        output.WriteLine($"{"God Mode on (header)",-32} {save.EasyMode != 0}");
-        if (save.RootTable.Find(["ConfigOptionCache", "EasyMode"]) is LuaBool luaEasyMode)
-            output.WriteLine($"{"God Mode on (ConfigOptionCache)",-32} {luaEasyMode.Value}");
+        output.WriteLine($"{"God Mode on",-32} {save.EasyMode != 0}");
         return 0;
     }
 

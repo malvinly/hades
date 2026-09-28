@@ -53,8 +53,7 @@ Darkness held                    4215
 Chthonic Keys held               11
 God Mode level                   4
 Lifetime Darkness (header)       38420
-God Mode on (header)             True
-God Mode on (ConfigOptionCache)  True
+God Mode on                      True
 ```
 
 For Hades 2:
@@ -69,7 +68,7 @@ Bones held                       1260
 Ashes held                       315
 Psyche held                      480
 God Mode level                   2
-God Mode on (header)             True
+God Mode on                      True
 ```
 
 A value the save does not contain yet is shown as `missing (not yet in this save)`.

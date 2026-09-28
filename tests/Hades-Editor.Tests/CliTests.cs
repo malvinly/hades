@@ -20,8 +20,7 @@ public class CliTests : IDisposable
         Assert.Contains("Chthonic Keys held               6", lines);
         Assert.Contains("God Mode level                   0", lines);
         Assert.Contains("Lifetime Darkness (header)       198", lines);
-        Assert.Contains("God Mode on (header)             False", lines);
-        Assert.Contains("God Mode on (ConfigOptionCache)  False", lines);
+        Assert.Contains("God Mode on                      False", lines);
     }
 
     [Fact]
@@ -34,7 +33,7 @@ public class CliTests : IDisposable
         Assert.Contains("Ashes held                       760", lines);
         Assert.Contains("Psyche held                      934", lines);
         Assert.Contains("God Mode level                   0", lines);
-        Assert.Contains("God Mode on (header)             False", lines);
+        Assert.Contains("God Mode on                      False", lines);
     }
 
     [Fact]
