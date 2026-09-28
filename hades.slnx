@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Hades.SaveFormat/Hades.SaveFormat.csproj" />
+    <Project Path="src/Hades1Editor/Hades1Editor.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Hades1Editor.Tests/Hades1Editor.Tests.csproj" />
+  </Folder>
+</Solution>
