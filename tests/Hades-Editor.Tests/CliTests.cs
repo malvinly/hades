@@ -72,6 +72,21 @@ public class CliTests : IDisposable
         Assert.Contains($"Saved to {Output}", output.ToString());
     }
 
+    [Fact]
+    public void Environment_variables_in_paths_are_expanded()
+    {
+        // PowerShell passes %VAR% through literally, so the app must expand it for the README paths to work there.
+        File.Copy(TestData.Hades1, Input);
+        Environment.SetEnvironmentVariable("HADES_EDITOR_TEST_DIR", _dir);
+        var dir = $"%HADES_EDITOR_TEST_DIR%{Path.DirectorySeparatorChar}";
+
+        Assert.Contains("Chthonic Keys held               6", Show(dir + "in.sav"));
+        var exitCode = Cli.Run(["set", dir + "in.sav", "--out", dir + "out.sav", "--keys", "50"], TextWriter.Null, TextWriter.Null);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(50, GameFields.ByGame[Game.Hades1].Single(f => f.Name == "keys").Get(HadesSave.Read(File.ReadAllBytes(Output))));
+    }
+
     private static string[] Show(string path)
     {
         var output = new StringWriter();

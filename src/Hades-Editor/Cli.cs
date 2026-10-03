@@ -23,8 +23,8 @@ public static class Cli
             var options = ParseOptions(args.Skip(2));
             return (args.ElementAtOrDefault(0), args.ElementAtOrDefault(1)) switch
             {
-                ("show", { } path) when options.Count == 0 => Show(path, output),
-                ("set", { } path) => Set(path, options, output),
+                ("show", { } path) when options.Count == 0 => Show(Environment.ExpandEnvironmentVariables(path), output),
+                ("set", { } path) => Set(Environment.ExpandEnvironmentVariables(path), options, output),
                 _ => throw new ArgumentException(Usage),
             };
         }
@@ -51,6 +51,7 @@ public static class Cli
     {
         if (!options.Remove("out", out var outPath))
             throw new ArgumentException("--out <path> is required\n" + Usage);
+        outPath = Environment.ExpandEnvironmentVariables(outPath);
         if (string.Equals(Path.GetFullPath(outPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Output path must be a different file from the input");
         if (options.Count == 0)
