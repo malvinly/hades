@@ -40,13 +40,15 @@ Close the game first. It rewrites the save file when you exit.
 
 Save locations:
 
-- Hades 1: `%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav`
-- Hades 2: `%USERPROFILE%\Saved Games\Hades II\Profile1.sav`
+- Hades 1: `$env:USERPROFILE\Documents\Saved Games\Hades\Profile1.sav`
+- Hades 2: `$env:USERPROFILE\Saved Games\Hades II\Profile1.sav`
+
+The examples below are for PowerShell, run from the folder that holds `hades-editor.exe`. In Command Prompt, drop the `.\` and write `%USERPROFILE%` instead of `$env:USERPROFILE`; the tool expands either form itself.
 
 ### Look at a save
 
-```
-hades-editor show "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav"
+```powershell
+.\hades-editor show "$env:USERPROFILE\Documents\Saved Games\Hades\Profile1.sav"
 ```
 
 ```
@@ -61,8 +63,8 @@ God Mode on                      True
 
 For Hades 2:
 
-```
-hades-editor show "%USERPROFILE%\Saved Games\Hades II\Profile1.sav"
+```powershell
+.\hades-editor show "$env:USERPROFILE\Saved Games\Hades II\Profile1.sav"
 ```
 
 ```
@@ -85,20 +87,20 @@ Backups are kept with the tool rather than in the save folder, because Steam Clo
 
 Change one value:
 
-```
-hades-editor set "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav" --darkness 20000
+```powershell
+.\hades-editor set "$env:USERPROFILE\Documents\Saved Games\Hades\Profile1.sav" --darkness 20000
 ```
 
 Change several at once:
 
-```
-hades-editor set "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav" --darkness 0 --keys 0 --godmode-level 10
+```powershell
+.\hades-editor set "$env:USERPROFILE\Documents\Saved Games\Hades\Profile1.sav" --darkness 0 --keys 0 --godmode-level 10
 ```
 
 Hades 2:
 
-```
-hades-editor set "%USERPROFILE%\Saved Games\Hades II\Profile1.sav" --bones 5000 --ashes 1000 --psyche 250
+```powershell
+.\hades-editor set "$env:USERPROFILE\Saved Games\Hades II\Profile1.sav" --bones 5000 --ashes 1000 --psyche 250
 ```
 
 The tool prints the values it wrote, the backup path, and the save path. Run `show` on the save to confirm.
@@ -111,10 +113,10 @@ With `--out`, `set` writes a new file and leaves the input untouched. No backup 
 
 Build a set of scenarios from one base save:
 
-```
-hades-editor set base.sav --out no-resources.sav --darkness 0 --keys 0
-hades-editor set base.sav --out rich.sav --darkness 50000 --keys 100
-hades-editor set base.sav --out godmode-max.sav --godmode-level 30
+```powershell
+.\hades-editor set base.sav --out no-resources.sav --darkness 0 --keys 0
+.\hades-editor set base.sav --out rich.sav --darkness 50000 --keys 100
+.\hades-editor set base.sav --out godmode-max.sav --godmode-level 30
 ```
 
 To use a scenario file, copy it over `Profile1.sav` in the save folder while the game is closed.
@@ -144,7 +146,7 @@ After every edit the output is re-read and checked for the new values before the
 
 From the repository root:
 
-```
+```powershell
 dotnet build -c Release
 ```
 
