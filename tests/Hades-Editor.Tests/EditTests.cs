@@ -7,14 +7,14 @@ public class EditTests
     [Fact]
     public void Hades1_edit_changes_exactly_the_requested_leaves() =>
         AssertEditChangesOnly(TestData.Hades1, Game.Hades1,
-            new() { ["darkness"] = 99999, ["keys"] = 42, ["godmode-level"] = 7 },
-            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/LockKeys", "/0/GameState/Resources/MetaPoints"]);
+            new() { ["darkness"] = 99999, ["keys"] = 42, ["nectar"] = 15, ["godmode-level"] = 7 },
+            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/GiftPoints", "/0/GameState/Resources/LockKeys", "/0/GameState/Resources/MetaPoints"]);
 
     [Fact]
     public void Hades2_edit_changes_exactly_the_requested_leaves() =>
         AssertEditChangesOnly(TestData.Hades2, Game.Hades2,
-            new() { ["bones"] = 5000, ["ashes"] = 1000, ["psyche"] = 250, ["godmode-level"] = 3 },
-            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/MemPointsCommon", "/0/GameState/Resources/MetaCardPointsCommon", "/0/GameState/Resources/MetaCurrency"]);
+            new() { ["bones"] = 5000, ["ashes"] = 1000, ["psyche"] = 250, ["nectar"] = 20, ["godmode-level"] = 3 },
+            ["/0/GameState/EasyModeLevel", "/0/GameState/Resources/GiftPoints", "/0/GameState/Resources/MemPointsCommon", "/0/GameState/Resources/MetaCardPointsCommon", "/0/GameState/Resources/MetaCurrency"]);
 
     [Fact]
     public void Setting_a_field_whose_value_is_not_a_number_is_refused()

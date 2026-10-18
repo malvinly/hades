@@ -14,6 +14,7 @@ This is a CLI tool for Hades 1 and Hades 2 save files (.sav). The game is detect
 | --- | --- | --- |
 | `--darkness N` | Darkness held | 0 or more |
 | `--keys N` | Chthonic Keys held | 0 or more |
+| `--nectar N` | Nectar held | 0 or more |
 | `--godmode-level N` | God Mode level | 0 to 30 |
 
 ### Hades 2
@@ -23,6 +24,7 @@ This is a CLI tool for Hades 1 and Hades 2 save files (.sav). The game is detect
 | `--bones N` | Bones held | 0 or more |
 | `--ashes N` | Ashes held | 0 or more |
 | `--psyche N` | Psyche held | 0 or more |
+| `--nectar N` | Nectar held | 0 or more |
 | `--godmode-level N` | God Mode level | 0 to 30 |
 
 Notes:
@@ -51,6 +53,7 @@ hades-editor show "%USERPROFILE%\Documents\Saved Games\Hades\Profile1.sav"
 Game                             Hades 1
 Darkness held                    4215
 Chthonic Keys held               11
+Nectar held                      3
 God Mode level                   4
 Lifetime Darkness (header)       38420
 God Mode on                      True
@@ -67,6 +70,7 @@ Game                             Hades 2
 Bones held                       1260
 Ashes held                       315
 Psyche held                      480
+Nectar held                      7
 God Mode level                   2
 God Mode on                      True
 ```

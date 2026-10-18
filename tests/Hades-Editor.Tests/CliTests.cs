@@ -18,6 +18,7 @@ public class CliTests : IDisposable
         Assert.Contains("Game                             Hades 1", lines);
         Assert.Contains("Darkness held                    10888", lines);
         Assert.Contains("Chthonic Keys held               6", lines);
+        Assert.Contains("Nectar held                      2", lines);
         Assert.Contains("God Mode level                   0", lines);
         Assert.Contains("Lifetime Darkness (header)       198", lines);
         Assert.Contains("God Mode on                      False", lines);
@@ -32,6 +33,7 @@ public class CliTests : IDisposable
         Assert.Contains("Bones held                       3785", lines);
         Assert.Contains("Ashes held                       760", lines);
         Assert.Contains("Psyche held                      934", lines);
+        Assert.Contains("Nectar held                      6", lines);
         Assert.Contains("God Mode level                   0", lines);
         Assert.Contains("God Mode on                      False", lines);
     }
