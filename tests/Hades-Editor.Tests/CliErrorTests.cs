@@ -7,6 +7,7 @@ public class CliErrorTests : IDisposable
     private readonly string _dir = Directory.CreateTempSubdirectory("hades-editor-tests").FullName;
     private string Input => Path.Combine(_dir, "in.sav");
     private string Output => Path.Combine(_dir, "out.sav");
+    private string BackupDir => Path.Combine(_dir, "hades-backup");
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
@@ -64,6 +65,19 @@ public class CliErrorTests : IDisposable
         AssertFails($"{option[2..]} must be between", "set", Input, "--out", Output, option, value);
     }
 
+    [Theory]
+    [InlineData("--godmode-level", "31", "godmode-level must be between")]
+    [InlineData("--darkness", "-5", "darkness must be between")]
+    [InlineData("--keys", "1.5", "--keys needs a whole number")]
+    [InlineData("--bones", "100", "--bones is not a Hades 1 field")]
+    public void In_place_validation_failure_leaves_the_save_untouched_and_makes_no_backup(string option, string value, string expectedMessagePart)
+    {
+        File.Copy(TestData.Hades1, Input);
+
+        AssertFails(expectedMessagePart, "set", Input, option, value);
+        Assert.Equal(File.ReadAllBytes(TestData.Hades1), File.ReadAllBytes(Input));
+    }
+
     [Fact]
     public void Non_integer_value_fails_and_writes_nothing()
     {
@@ -100,11 +114,12 @@ public class CliErrorTests : IDisposable
     }
 
     [Fact]
-    public void Missing_out_option_fails()
+    public void Set_with_no_fields_fails_and_writes_nothing()
     {
         File.Copy(TestData.Hades1, Input);
 
-        AssertFails("--out <path> is required", "set", Input, "--darkness", "1");
+        AssertFails("Nothing to set", "set", Input);
+        Assert.Equal(File.ReadAllBytes(TestData.Hades1), File.ReadAllBytes(Input));
     }
 
     [Fact]
@@ -124,13 +139,48 @@ public class CliErrorTests : IDisposable
     }
 
     [Fact]
+    public void Unwritable_backup_folder_fails_and_leaves_the_save_untouched()
+    {
+        File.Copy(TestData.Hades1, Input);
+        File.WriteAllText(BackupDir, "a file where the backup folder should go makes creating it fail");
+
+        var error = new StringWriter();
+        var exitCode = Cli.Run(["set", Input, "--keys", "5"], TextWriter.Null, error, BackupDir);
+
+        Assert.NotEqual(0, exitCode);
+        Assert.Contains($"Could not create the backup folder {BackupDir}", error.ToString());
+        Assert.Contains("The save was not modified", error.ToString());
+        Assert.Equal(File.ReadAllBytes(TestData.Hades1), File.ReadAllBytes(Input));
+        Assert.Equal(2, Directory.GetFiles(_dir).Length);
+    }
+
+    [Fact]
+    public void Failed_in_place_move_keeps_the_save_and_the_backup()
+    {
+        File.Copy(TestData.Hades1, Input);
+        var original = File.ReadAllBytes(Input);
+        var error = new StringWriter();
+
+        int exitCode;
+        using (new FileStream(Input, FileMode.Open, FileAccess.Read, FileShare.Read)) // another program holding the save open makes the final move fail
+            exitCode = Cli.Run(["set", Input, "--keys", "5"], TextWriter.Null, error, BackupDir);
+
+        Assert.NotEqual(0, exitCode);
+        Assert.Equal(original, File.ReadAllBytes(Input));
+        Assert.Equal([Input], Directory.GetFiles(_dir));
+        var backup = Assert.Single(Directory.GetFiles(BackupDir));
+        Assert.Equal(original, File.ReadAllBytes(backup));
+        Assert.Contains($"The save was not modified; its backup is at {backup}", error.ToString());
+    }
+
+    [Fact]
     public void Failed_move_into_place_leaves_no_files_behind()
     {
         File.Copy(TestData.Hades1, Input);
         Directory.CreateDirectory(Output); // a directory where the output file should go makes the final move fail
 
         var error = new StringWriter();
-        var exitCode = Cli.Run(["set", Input, "--out", Output, "--keys", "5"], TextWriter.Null, error);
+        var exitCode = Cli.Run(["set", Input, "--out", Output, "--keys", "5"], TextWriter.Null, error, BackupDir);
 
         Assert.NotEqual(0, exitCode);
         Assert.StartsWith("Error:", error.ToString());
@@ -141,11 +191,12 @@ public class CliErrorTests : IDisposable
     {
         var error = new StringWriter();
 
-        var exitCode = Cli.Run(args, TextWriter.Null, error);
+        var exitCode = Cli.Run(args, TextWriter.Null, error, BackupDir);
 
         Assert.NotEqual(0, exitCode);
         Assert.Contains(expectedMessagePart, error.ToString());
         Assert.False(File.Exists(Output), "No output file should be written on error");
+        Assert.False(Directory.Exists(BackupDir), "No backup should be written on error");
         Assert.All(Directory.GetFiles(_dir), f => Assert.Equal(Input, f));
     }
 

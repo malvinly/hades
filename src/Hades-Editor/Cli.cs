@@ -7,16 +7,20 @@ public static class Cli
     private static readonly string Usage = $"""
         Usage:
           hades-editor show <save.sav>
+          hades-editor set <save.sav> [--<field> N]...
           hades-editor set <save.sav> --out <new.sav> [--<field> N]...
 
         The game is detected from the save file. Fields:
         {string.Join("\n", GameFields.ByGame.Select(g => $"  {GameFields.Label(g.Key)}:\n" +
             string.Join("\n", g.Value.Select(f => $"    --{f.Name,-14} {f.Description} ({f.Min}-{f.Max})"))))}
 
-        The input file is never written to. The output path must be a different file.
+        Without --out the save is edited in place. A copy of the original is written to the hades-backup
+        folder next to hades-editor.exe first, and the save is left untouched if that copy fails.
+        With --out a new file is written and the input is never touched. The output path must be a different file.
         """;
 
-    public static int Run(string[] args, TextWriter output, TextWriter error)
+    /// <param name="backupDir">Folder that receives a copy of every save edited in place.</param>
+    public static int Run(string[] args, TextWriter output, TextWriter error, string backupDir)
     {
         try
         {
@@ -24,7 +28,7 @@ public static class Cli
             return (args.ElementAtOrDefault(0), args.ElementAtOrDefault(1)) switch
             {
                 ("show", { } path) when options.Count == 0 => Show(Environment.ExpandEnvironmentVariables(path), output),
-                ("set", { } path) => Set(Environment.ExpandEnvironmentVariables(path), options, output),
+                ("set", { } path) => Set(Environment.ExpandEnvironmentVariables(path), options, output, backupDir),
                 _ => throw new ArgumentException(Usage),
             };
         }
@@ -47,13 +51,16 @@ public static class Cli
         return 0;
     }
 
-    private static int Set(string path, Dictionary<string, string> options, TextWriter output)
+    private static int Set(string path, Dictionary<string, string> options, TextWriter output, string backupDir)
     {
-        if (!options.Remove("out", out var outPath))
-            throw new ArgumentException("--out <path> is required\n" + Usage);
-        outPath = Environment.ExpandEnvironmentVariables(outPath);
-        if (string.Equals(Path.GetFullPath(outPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Output path must be a different file from the input");
+        var inPlace = !options.Remove("out", out var outOption);
+        var outPath = path;
+        if (!inPlace)
+        {
+            outPath = Environment.ExpandEnvironmentVariables(outOption!);
+            if (string.Equals(Path.GetFullPath(outPath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Output path must be a different file from the input");
+        }
         if (options.Count == 0)
             throw new ArgumentException("Nothing to set\n" + Usage);
 
@@ -76,11 +83,76 @@ public static class Cli
             if (field.Get(reread) != newValue)
                 throw new SaveFormatException($"Verification failed: {field.Name} did not read back as {newValue}");
 
-        WriteAtomically(outPath, bytes);
+        string? backupPath = null;
+        if (inPlace)
+        {
+            backupPath = WriteBackup(backupDir, path, save.Game, input);
+            if (!File.ReadAllBytes(path).AsSpan().SequenceEqual(input))
+                throw new IOException($"{path} changed on disk after it was read. The save was not modified; the copy read earlier is at {backupPath}");
+        }
+        try
+        {
+            WriteAtomically(outPath, bytes);
+        }
+        catch (Exception e) when (backupPath != null && e is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException($"{e.Message} The save was not modified; its backup is at {backupPath}", e);
+        }
+
         foreach (var (field, newValue) in edits)
             output.WriteLine($"{field.Description,-32} {newValue}");
+        if (backupPath != null)
+            output.WriteLine($"Backup saved to {backupPath}");
         output.WriteLine($"Saved to {outPath}");
         return 0;
+    }
+
+    /// <summary>
+    /// Copies the original bytes of a save into the backup folder and reads them back to confirm the copy is intact.
+    /// Nothing about the save is touched until this has succeeded. Names carry a timestamp to the second, so a second
+    /// edit within the same second gets a numeric suffix instead of overwriting the earlier backup.
+    /// </summary>
+    private static string WriteBackup(string backupDir, string savePath, Game game, byte[] original)
+    {
+        try
+        {
+            Directory.CreateDirectory(backupDir);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            throw new IOException($"Could not create the backup folder {backupDir} ({e.Message}). The save was not modified");
+        }
+
+        var stem = $"{game}-{Path.GetFileNameWithoutExtension(savePath)}-{DateTime.Now:yyyyMMdd-HHmmss}";
+        for (var attempt = 0; ; attempt++)
+        {
+            var backupPath = Path.Combine(backupDir, attempt == 0 ? $"{stem}.sav" : $"{stem}-{attempt}.sav");
+            FileStream stream;
+            try
+            {
+                stream = new FileStream(backupPath, FileMode.CreateNew);
+            }
+            catch (IOException) when (File.Exists(backupPath) && attempt < 100)
+            {
+                continue;
+            }
+            try
+            {
+                using (stream)
+                {
+                    stream.Write(original);
+                    stream.Flush(flushToDisk: true);
+                }
+                if (File.ReadAllBytes(backupPath).AsSpan().SequenceEqual(original))
+                    return backupPath;
+                throw new IOException("it did not read back intact");
+            }
+            catch (IOException e)
+            {
+                File.Delete(backupPath);
+                throw new IOException($"Could not write the backup {backupPath} ({e.Message}). The save was not modified", e);
+            }
+        }
     }
 
     /// <summary>
@@ -93,7 +165,10 @@ public static class Cli
         try
         {
             using (var stream = new FileStream(tempPath, FileMode.CreateNew))
+            {
                 stream.Write(bytes);
+                stream.Flush(flushToDisk: true);
+            }
             File.Move(tempPath, outPath, overwrite: true);
         }
         finally
